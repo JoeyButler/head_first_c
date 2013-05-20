@@ -69,32 +69,41 @@ int main(int argc, const char *argv[])
         &address_size);
     if(connect_d == -1) error("Cannot open secondary socket");
 
-    /* Begin */
-    char* msg = "Internet Knock-Knock Protocol Server\r\nVersion 1.0\r\nKnock Knock!\r\n> ";
-    if(send(connect_d, msg, strlen(msg), 0) == -1) error("send");
+    if(!fork()) { // Inside the child process
+      // Close the listener that the parent opened.
+      close(listener_d);
 
-    char input_buffer[40000] = "";
-    int ll = 80;
-    read_in(connect_d, input_buffer, ll);
-    fprintf(stderr, "The user said: %s\n", input_buffer);
+      /* Begin */
+      char* msg = "Internet Knock-Knock Protocol Server\r\nVersion 1.0\r\nKnock Knock!\r\n> ";
+      if(send(connect_d, msg, strlen(msg), 0) == -1) error("send");
 
-    int cmp = strcmp(input_buffer, "Who's there?\r");
+      char input_buffer[40000] = "";
+      int ll = 80;
+      read_in(connect_d, input_buffer, ll);
+      fprintf(stderr, "The user said: %s\n", input_buffer);
 
-    if(cmp != 0) {
-      if(send(connect_d, "Follow the rules\n", 18, 0) == -1)
-        error("User didn't say \"Who's there?\"");
+      int cmp = strcmp(input_buffer, "Who's there?\r");
+
+      if(cmp != 0) {
+        if(send(connect_d, "Follow the rules\n", 18, 0) == -1)
+          error("User didn't say \"Who's there?\"");
+      }
+
+      if(send(connect_d, "Oscar\n", 6, 0) == -1)
+        error("send");
+
+      read_in(connect_d, input_buffer, ll);
+      fprintf(stderr, "The user said: %s\n", input_buffer);
+
+      if(send(connect_d, "Oscar silly question, you get a silly answer\n", 46, 0) == -1)
+        error("send");
+
+      sleep(1);
+      close(connect_d);
+      exit(0);
     }
 
-    if(send(connect_d, "Oscar\n", 6, 0) == -1)
-      error("send");
-
-    read_in(connect_d, input_buffer, ll);
-    fprintf(stderr, "The user said: %s\n", input_buffer);
-
-    if(send(connect_d, "Oscar silly question, you get a silly answer\n", 46, 0) == -1)
-      error("send");
-
-    sleep(1);
+    // The parent needs to clean up as well.
     close(connect_d);
   }
 
